@@ -61,6 +61,7 @@ public class FunasrWsClient extends WebSocketClient {
             String wavName,
             boolean isSpeaking,
             String suffix) {
+        this.mode = mode;
         try {
 
             JSONObject obj = new JSONObject();
@@ -214,7 +215,7 @@ public class FunasrWsClient extends WebSocketClient {
     private boolean iseof = false;
     private CountDownLatch finishLatch = new CountDownLatch(1);;
     private String text;
-    static String mode = "online";
+    private String mode = "online";
     static String strChunkSize = "5,10,5";
     static int chunkInterval = 10;
 
