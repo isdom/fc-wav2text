@@ -181,6 +181,8 @@ public class FunasrWsClient extends WebSocketClient {
             logger.warn("call close() 1");
         }
 
+        logger.warn("iseof : " + iseof + ",mode:" + mode + ",is_final:" + jsonObject.get("is_final"));
+
         if (iseof && mode.equals("offline") && jsonObject.containsKey("is_final")) {
             Object is_final = jsonObject.get("is_final");
             logger.warn("is_final type is: " + is_final.getClass() + ",and its value:" + is_final.toString());
