@@ -10,13 +10,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import org.asynchttpclient.AsyncHttpClient;
+
+import static org.asynchttpclient.Dsl.*;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CountDownLatch;
 
 public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
 
@@ -43,8 +43,10 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        try (final Connection conn = factory.newConnection();
+        try (final AsyncHttpClient ahc = asyncHttpClient();
+             final Connection conn = factory.newConnection();
              final Channel channel = conn.createChannel()) {
+            context.getLogger().info("AHC config:" + ahc.getConfig());
             context.getLogger().info("MQ env: uri:" + uri + ", exchange:" + exchange + ",routingKey:" + routingKey);
             // 创建OSSClient实例。
             final OSS ossClient = new OSSClientBuilder().build(endpoint,
@@ -52,25 +54,59 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
                     creds.getAccessKeySecret(),
                     creds.getSecurityToken());
             context.getLogger().info("handle (" + events.length + ") events");
+
+            final CountDownLatch finishLatch = new CountDownLatch(events.length);
+
             for (RbtEvent event : events) {
+                final RbtResultVO resultvo = new RbtResultVO();
+                resultvo.setSessionId(event.data.body.getSessionId());
+
+                final OSSObject source = getOSSObject(context, event, ossClient, resultvo);
+                if (source == null) {
+                    finishLatch.countDown();
+                    continue;
+                }
                 try {
-                    RbtResultVO vo = rbt2text_by_funasr(context, event, ossClient);
-                    if (vo != null) {
-                        sendRbtResult(context, vo, channel, exchange, routingKey);
-                    }
+                    context.getLogger().info("oss source: " + source.getKey());
+                    resultvo.setStartProcessTimestamp(System.currentTimeMillis());
+                    new FunasrClient(context,
+                            ahc.prepareGet(System.getenv("FUNASR_WSURI")),
+                            source.getObjectContent(),
+                            (text) -> {
+                                resultvo.setEndProcessTimestamp(System.currentTimeMillis());
+                                resultvo.setText(text);
+                                try {
+                                    source.close();
+                                } catch (IOException e) {
+                                    // throw new RuntimeException(e);
+                                }
+                                try {
+                                    sendRbtResult(context, resultvo, channel, exchange, routingKey);
+                                } catch (IOException e) {
+                                    // throw new RuntimeException(e);
+                                }
+                                finishLatch.countDown();
+                            });
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }
+
+            context.getLogger().info("wait for all funasr offline ("+events.length+") task complete");
+            // wait for complete
+            finishLatch.await();
+            context.getLogger().info("all funasr offline ("+events.length+") task completed.");
+
             // 关闭OSSClient
             ossClient.shutdown();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+
         return "handle (" + events.length +") events";
     }
 
-    private RbtResultVO rbt2text_by_funasr(final Context context, final RbtEvent event, final OSS ossClient) throws IOException, URISyntaxException, InterruptedException, NoSuchAlgorithmException, KeyManagementException, TimeoutException {
+    private OSSObject getOSSObject(Context context, RbtEvent event, OSS ossClient, RbtResultVO resultvo) {
         if (event.data == null || event.data.body == null || event.data.body.ossPath == null) {
             context.getLogger().warn("event's ossPath is null, skip");
             return null;
@@ -97,19 +133,7 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
             return null;
         }
 
-        final RbtResultVO vo = new RbtResultVO();
-        vo.setSessionId(event.data.body.getSessionId());
-        vo.setObjectName(objectName);
-        vo.setSourceTimestamp(event.data.body.getSourceTimestamp());
-
-        try (final OSSObject ossObj = ossClient.getObject(bucketName, objectName)) {
-            context.getLogger().info("ossobj: " + ossObj.getKey());
-            vo.setStartProcessTimestamp(System.currentTimeMillis());
-            final String text = FunasrWsClient.wav2text(context, System.getenv("FUNASR_WSURI"), ossObj.getObjectContent());
-            vo.setEndProcessTimestamp(System.currentTimeMillis());
-            vo.setText(text);
-        }
-
-        return vo;
+        resultvo.setObjectName(objectName);
+        return ossClient.getObject(bucketName, objectName);
     }
 }
