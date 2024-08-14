@@ -25,8 +25,6 @@ import org.java_websocket.handshake.ServerHandshake;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** This example demonstrates how to connect to websocket server. */
 public class FunasrWsClient extends WebSocketClient {
@@ -220,7 +218,7 @@ public class FunasrWsClient extends WebSocketClient {
 
     String wavName = "javatest";
 
-    public static String wav2text(String wsuri, InputStream is, Context context) throws InterruptedException, URISyntaxException, IOException {
+    public static String wav2text(Context context, String wsuri, InputStream is) throws InterruptedException, URISyntaxException, IOException {
         final FunasrWsClient c = new FunasrWsClient(new URI(wsuri), context);
 
         if (!c.connectBlocking()) {

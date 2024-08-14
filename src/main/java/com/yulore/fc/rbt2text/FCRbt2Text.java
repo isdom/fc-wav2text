@@ -105,7 +105,7 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
         try (final OSSObject ossObj = ossClient.getObject(bucketName, objectName)) {
             context.getLogger().info("ossobj: " + ossObj.getKey());
             vo.setStartProcessTimestamp(System.currentTimeMillis());
-            final String text = FunasrWsClient.wav2text(System.getenv("FUNASR_WSURI"), ossObj.getObjectContent());
+            final String text = FunasrWsClient.wav2text(context, System.getenv("FUNASR_WSURI"), ossObj.getObjectContent());
             vo.setEndProcessTimestamp(System.currentTimeMillis());
             vo.setText(text);
         }
