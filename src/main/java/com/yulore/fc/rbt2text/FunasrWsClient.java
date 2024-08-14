@@ -17,6 +17,8 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
+import com.aliyun.fc.runtime.Context;
+import com.aliyun.fc.runtime.FunctionComputeLogger;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft;
 import org.java_websocket.handshake.ServerHandshake;
@@ -29,15 +31,17 @@ import org.slf4j.LoggerFactory;
 /** This example demonstrates how to connect to websocket server. */
 public class FunasrWsClient extends WebSocketClient {
 
-    private static final Logger logger = LoggerFactory.getLogger(FunasrWsClient.class);
+    // private static final Logger logger = LoggerFactory.getLogger(FunasrWsClient.class);
+    FunctionComputeLogger logger;
 
     public FunasrWsClient(URI serverUri, Draft draft) {
         super(serverUri, draft);
     }
 
-    public FunasrWsClient(URI serverURI) {
+    public FunasrWsClient(URI serverURI, Context context) {
 
         super(serverURI);
+        logger = context.getLogger();
     }
 
     public FunasrWsClient(URI serverUri, Map<String, String> httpHeaders) {
@@ -57,6 +61,7 @@ public class FunasrWsClient extends WebSocketClient {
             String wavName,
             boolean isSpeaking,
             String suffix) {
+        this.mode = mode;
         try {
 
             JSONObject obj = new JSONObject();
@@ -174,10 +179,12 @@ public class FunasrWsClient extends WebSocketClient {
         }
         if (iseof && mode.equals("offline") && !jsonObject.containsKey("is_final")) {
             close();
+            logger.warn("call close() 1");
         }
 
-        if (iseof && mode.equals("offline") && jsonObject.containsKey("is_final") && jsonObject.get("is_final").equals("false")) {
+        if (iseof && mode.equals("offline") && jsonObject.containsKey("is_final") && !(Boolean)jsonObject.get("is_final")) {
             close();
+            logger.warn("call close() 2");
         }
         finishLatch.countDown();
     }
@@ -204,7 +211,7 @@ public class FunasrWsClient extends WebSocketClient {
     private boolean iseof = false;
     private CountDownLatch finishLatch = new CountDownLatch(1);;
     private String text;
-    static String mode = "online";
+    private String mode = "online";
     static String strChunkSize = "5,10,5";
     static int chunkInterval = 10;
 
@@ -213,8 +220,8 @@ public class FunasrWsClient extends WebSocketClient {
 
     String wavName = "javatest";
 
-    public static String wav2text(String wsuri, InputStream is) throws InterruptedException, URISyntaxException, IOException {
-        final FunasrWsClient c = new FunasrWsClient(new URI(wsuri));
+    public static String wav2text(String wsuri, InputStream is, Context context) throws InterruptedException, URISyntaxException, IOException {
+        final FunasrWsClient c = new FunasrWsClient(new URI(wsuri), context);
 
         if (!c.connectBlocking()) {
             return "";
@@ -233,6 +240,7 @@ public class FunasrWsClient extends WebSocketClient {
 
         c.sendwav("offline", strChunkSize, chunkInterval, sendChunkSize, is);
         c.finishLatch.await();
+        context.getLogger().warn("after finishLatch.await()");
         return c.text;
     }
 }
