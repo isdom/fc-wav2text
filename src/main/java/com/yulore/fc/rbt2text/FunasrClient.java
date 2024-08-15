@@ -23,6 +23,8 @@ import org.json.simple.parser.JSONParser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /** This example demonstrates how to connect to websocket server. */
@@ -35,8 +37,10 @@ public class FunasrClient {
                         final BoundRequestBuilder brb,
                         final InputStream is,
                         final Consumer<String> onResult,
-                        final Consumer<Throwable> onError) throws ExecutionException, InterruptedException {
+                        final Consumer<Throwable> onError,
+                        final BiConsumer<Integer, String> onClose) throws ExecutionException, InterruptedException {
         logger = context.getLogger();
+        final AtomicBoolean isOnTextOrOnError = new AtomicBoolean(false);
         websocket = brb.execute(new WebSocketUpgradeHandler.Builder().addWebSocketListener(new WebSocketListener() {
             @Override
             public void onOpen(WebSocket ws) {
@@ -56,15 +60,15 @@ public class FunasrClient {
 
             @Override
             public void onClose(WebSocket webSocket, int code, String reason) {
-                logger.info(
-                        "Connection closed / Code: "
-                                + code
-                                + " Reason: "
-                                + reason);
+                logger.info("Connection closed / Code: " + code + " Reason: " + reason);
+                if (!isOnTextOrOnError.get()) {
+                    onClose.accept(code, reason);
+                }
             }
 
             @Override
             public void onError(Throwable throwable) {
+                isOnTextOrOnError.compareAndExchange(false, true);
                 logger.info("ex: " + throwable);
                 websocket.sendCloseFrame(1000, "ex:" + throwable);
                 onError.accept(throwable);
@@ -72,6 +76,7 @@ public class FunasrClient {
 
             @Override
             public void onTextFrame(String payload, boolean finalFragment, int rsv) {
+                isOnTextOrOnError.compareAndExchange(false, true);
                 JSONObject jsonObject = new JSONObject();
                 final JSONParser jsonParser = new JSONParser();
                 logger.info("received: " + payload);

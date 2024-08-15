@@ -22,11 +22,14 @@ import static org.asynchttpclient.Dsl.*;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
     @Override
     public String handleRequest(final RbtEvent[] events, final Context context) {
+        final AtomicReference<Throwable> exRef = new AtomicReference<>(null);
+
         try (final RedisClient redisClient = RedisClient.create(getRedisURI());
              final StatefulRedisConnection<String, String> redisConnection = redisClient.connect();
              final AsyncHttpClient ahc = asyncHttpClient(new DefaultAsyncHttpClientConfig.Builder()
@@ -89,8 +92,21 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
                                 finishLatch.countDown();
                             },
                             (throwable) -> {
+                                exRef.set(throwable);
                                 rrvo.setEndProcessTimestamp(System.currentTimeMillis());
                                 rrvo.setText(throwable.toString());
+                                try {
+                                    source.close();
+                                } catch (IOException e) {
+                                    // throw new RuntimeException(e);
+                                }
+                                sendResult.accept(rrvo);
+                                finishLatch.countDown();
+                            },
+                            (code, reason) -> {
+                                exRef.set(new RuntimeException("close:" + code + "/" + reason));
+                                rrvo.setEndProcessTimestamp(System.currentTimeMillis());
+                                rrvo.setText("error:close:" + code + "/" + reason);
                                 try {
                                     source.close();
                                 } catch (IOException e) {
@@ -119,6 +135,9 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
             throw new RuntimeException(e);
         }
 
+        if (exRef.get() != null) {
+            throw new RuntimeException(exRef.get());
+        }
         return "handle (" + events.length +") events";
     }
 
