@@ -60,6 +60,7 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
             for (RbtEvent event : events) {
                 final RbtResultVO resultvo = new RbtResultVO();
                 resultvo.setSessionId(event.data.body.getSessionId());
+                resultvo.setSourceTimestamp(event.data.body.getSourceTimestamp());
 
                 final OSSObject source = getOSSObject(context, event, ossClient, resultvo);
                 if (source == null) {
@@ -106,7 +107,7 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
         return "handle (" + events.length +") events";
     }
 
-    private OSSObject getOSSObject(Context context, RbtEvent event, OSS ossClient, RbtResultVO resultvo) {
+    private OSSObject getOSSObject(final Context context, final RbtEvent event, final OSS ossClient, final RbtResultVO resultvo) {
         if (event.data == null || event.data.body == null || event.data.body.ossPath == null) {
             context.getLogger().warn("event's ossPath is null, skip");
             return null;
