@@ -34,7 +34,8 @@ public class FunasrClient {
     public FunasrClient(final Context context,
                         final BoundRequestBuilder brb,
                         final InputStream is,
-                        final Consumer<String> onResult) throws ExecutionException, InterruptedException {
+                        final Consumer<String> onResult,
+                        final Consumer<Throwable> onError) throws ExecutionException, InterruptedException {
         logger = context.getLogger();
         websocket = brb.execute(new WebSocketUpgradeHandler.Builder().addWebSocketListener(new WebSocketListener() {
             @Override
@@ -65,6 +66,8 @@ public class FunasrClient {
             @Override
             public void onError(Throwable throwable) {
                 logger.info("ex: " + throwable);
+                websocket.sendCloseFrame(1000, "ex:" + throwable);
+                onError.accept(throwable);
             }
 
             @Override

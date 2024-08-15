@@ -13,6 +13,7 @@ import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.jetbrains.annotations.NotNull;
 import org.json.simple.JSONObject;
 
@@ -28,7 +29,10 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
     public String handleRequest(final RbtEvent[] events, final Context context) {
         try (final RedisClient redisClient = RedisClient.create(getRedisURI());
              final StatefulRedisConnection<String, String> redisConnection = redisClient.connect();
-             final AsyncHttpClient ahc = asyncHttpClient();
+             final AsyncHttpClient ahc = asyncHttpClient(new DefaultAsyncHttpClientConfig.Builder()
+                     .setMaxRequestRetry(0)
+                     .setWebSocketMaxBufferSize(1024000)
+                     .setWebSocketMaxFrameSize(1024000).build());
              final com.rabbitmq.client.Connection rabbitmqConnection = getRabbitMQConnectionFactory(context).newConnection();
              final com.rabbitmq.client.Channel rabbitmqChannel = rabbitmqConnection.createChannel()) {
 
@@ -76,6 +80,17 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
                             (text) -> {
                                 rrvo.setEndProcessTimestamp(System.currentTimeMillis());
                                 rrvo.setText(text);
+                                try {
+                                    source.close();
+                                } catch (IOException e) {
+                                    // throw new RuntimeException(e);
+                                }
+                                sendResult.accept(rrvo);
+                                finishLatch.countDown();
+                            },
+                            (throwable) -> {
+                                rrvo.setEndProcessTimestamp(System.currentTimeMillis());
+                                rrvo.setText(throwable.toString());
                                 try {
                                     source.close();
                                 } catch (IOException e) {
