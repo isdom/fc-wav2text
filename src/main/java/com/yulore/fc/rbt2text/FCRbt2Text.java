@@ -14,6 +14,7 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import org.asynchttpclient.AsyncHttpClient;
 import org.jetbrains.annotations.NotNull;
+import org.json.simple.JSONObject;
 
 import static org.asynchttpclient.Dsl.*;
 
@@ -31,14 +32,21 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
              final com.rabbitmq.client.Connection rabbitmqConnection = getRabbitMQConnectionFactory(context).newConnection();
              final com.rabbitmq.client.Channel rabbitmqChannel = rabbitmqConnection.createChannel()) {
 
-            //final RedisAsyncCommands<String, String> redisCommands = redisConnection.async();
             context.getLogger().warn("func: (FunctionName:" + context.getFunctionParam().getFunctionName()
-                    + "/FunctionInitializer:" + context.getFunctionParam().getFunctionInitializer()
-                    + "/ServiceName:" + context.getService().getName() +")");
-            // redisCommands.hset();
+                    + "/RequestId:" + context.getRequestId() +")");
 
-            context.getLogger().info("handle (" + events.length + ") events");
-            context.getLogger().info("AHC config:" + ahc.getConfig());
+            final RedisAsyncCommands<String, String> redisCommands = redisConnection.async();
+            final JSONObject funcInfo = new JSONObject();
+            funcInfo.put("conn", events.length);
+            funcInfo.put("tm", System.currentTimeMillis());
+
+            boolean setOk = redisCommands.hset(context.getFunctionParam().getFunctionName(),
+                    context.getRequestId(),
+                    funcInfo.toString()).get();
+            context.getLogger().info("hset:" + context.getFunctionParam().getFunctionName() + "-" + context.getRequestId() + "/"+ funcInfo + " -> "+ setOk);
+
+            // context.getLogger().info("handle (" + events.length + ") events");
+            // context.getLogger().info("AHC config:" + ahc.getConfig());
 
             final CountDownLatch finishLatch = new CountDownLatch(events.length);
 
@@ -85,6 +93,10 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
             // wait for complete
             finishLatch.await();
             context.getLogger().info("all funasr offline ("+events.length+") task completed.");
+
+            long delCnt = redisCommands.hdel(context.getFunctionParam().getFunctionName(),
+                    context.getRequestId()).get();
+            context.getLogger().info("hdel:" + context.getFunctionParam().getFunctionName() + "-" + context.getRequestId() + " -> " + delCnt);
 
             // 关闭OSSClient
             ossClient.shutdown();
