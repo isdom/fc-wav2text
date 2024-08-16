@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -31,19 +32,21 @@ import java.util.function.Consumer;
 public class FunasrClient {
 
     FunctionComputeLogger logger;
-    WebSocket websocket;
 
     public FunasrClient(final Context context,
                         final BoundRequestBuilder brb,
                         final InputStream is,
                         final Consumer<String> onResult,
                         final Consumer<Throwable> onError,
-                        final BiConsumer<Integer, String> onClose) throws ExecutionException, InterruptedException {
+                        final BiConsumer<Integer, String> onClose) {
         logger = context.getLogger();
         final AtomicBoolean isOnTextOrOnError = new AtomicBoolean(false);
-        websocket = brb.execute(new WebSocketUpgradeHandler.Builder().addWebSocketListener(new WebSocketListener() {
+        final AtomicReference<WebSocket> wsRef = new AtomicReference<>(null);
+        brb.execute(new WebSocketUpgradeHandler.Builder().addWebSocketListener(new WebSocketListener() {
             @Override
-            public void onOpen(WebSocket ws) {
+            public void onOpen(final WebSocket ws) {
+                wsRef.set(ws);
+
                 // step 1
                 sendBeginMsg(ws);
 
@@ -67,10 +70,12 @@ public class FunasrClient {
             }
 
             @Override
-            public void onError(Throwable throwable) {
+            public void onError(final Throwable throwable) {
                 isOnTextOrOnError.compareAndExchange(false, true);
                 logger.info("ex: " + throwable);
-                websocket.sendCloseFrame(1000, "ex:" + throwable);
+                if (wsRef.get() != null) {
+                    wsRef.get().sendCloseFrame(1000, "ex:" + throwable);
+                }
                 onError.accept(throwable);
             }
 
@@ -89,10 +94,12 @@ public class FunasrClient {
                 } catch (org.json.simple.parser.ParseException e) {
                     e.printStackTrace();
                 }
-                websocket.sendCloseFrame();
+                if (wsRef.get() != null) {
+                    wsRef.get().sendCloseFrame();
+                }
                 onResult.accept(jsonObject.get("text").toString());
             }
-        }).build()).get();
+        }).build());
     }
 
     private int getSendChunkSize() {

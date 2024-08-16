@@ -65,59 +65,57 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
             final Consumer<RbtResultVO> sendResult = buildSendRbtResultVO(context, rabbitmqChannel);
 
             for (RbtEvent event : events) {
-                final RbtResultVO rrvo = new RbtResultVO();
-                rrvo.setSessionId(event.data.body.getSessionId());
-                rrvo.setSourceTimestamp(event.data.body.getSourceTimestamp());
-
-                final OSSObject source = getOSSObject(context, event, ossClient, rrvo);
+                final OSSObject source = getOSSObject(context, event, ossClient);
                 if (source == null) {
                     finishLatch.countDown();
                     continue;
                 }
-                try {
-                    context.getLogger().info("oss source: " + source.getKey());
-                    rrvo.setStartProcessTimestamp(System.currentTimeMillis());
-                    new FunasrClient(context,
-                            ahc.prepareGet(System.getenv("FUNASR_WSURI")),
-                            source.getObjectContent(),
-                            (text) -> {
-                                rrvo.setEndProcessTimestamp(System.currentTimeMillis());
-                                rrvo.setText(text);
-                                try {
-                                    source.close();
-                                } catch (IOException e) {
-                                    // throw new RuntimeException(e);
-                                }
-                                sendResult.accept(rrvo);
-                                finishLatch.countDown();
-                            },
-                            (throwable) -> {
-                                exRef.set(throwable);
-                                rrvo.setEndProcessTimestamp(System.currentTimeMillis());
-                                rrvo.setText(throwable.toString());
-                                try {
-                                    source.close();
-                                } catch (IOException e) {
-                                    // throw new RuntimeException(e);
-                                }
-                                sendResult.accept(rrvo);
-                                finishLatch.countDown();
-                            },
-                            (code, reason) -> {
-                                exRef.set(new RuntimeException("close:" + code + "/" + reason));
-                                rrvo.setEndProcessTimestamp(System.currentTimeMillis());
-                                rrvo.setText("error:close:" + code + "/" + reason);
-                                try {
-                                    source.close();
-                                } catch (IOException e) {
-                                    // throw new RuntimeException(e);
-                                }
-                                sendResult.accept(rrvo);
-                                finishLatch.countDown();
-                            });
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+
+                final RbtResultVO rrvo = new RbtResultVO();
+                rrvo.setSessionId(event.data.body.getSessionId());
+                rrvo.setSourceTimestamp(event.data.body.getSourceTimestamp());
+                rrvo.setObjectName(source.getKey());
+
+                context.getLogger().info("oss source: " + source.getKey());
+                rrvo.setStartProcessTimestamp(System.currentTimeMillis());
+                new FunasrClient(context,
+                        ahc.prepareGet(System.getenv("FUNASR_WSURI")),
+                        source.getObjectContent(),
+                        (text) -> {
+                            rrvo.setEndProcessTimestamp(System.currentTimeMillis());
+                            rrvo.setText(text);
+                            try {
+                                source.close();
+                            } catch (IOException e) {
+                                // throw new RuntimeException(e);
+                            }
+                            sendResult.accept(rrvo);
+                            finishLatch.countDown();
+                        },
+                        (throwable) -> {
+                            exRef.set(throwable);
+                            rrvo.setEndProcessTimestamp(System.currentTimeMillis());
+                            rrvo.setText(throwable.toString());
+                            try {
+                                source.close();
+                            } catch (IOException e) {
+                                // throw new RuntimeException(e);
+                            }
+                            sendResult.accept(rrvo);
+                            finishLatch.countDown();
+                        },
+                        (code, reason) -> {
+                            exRef.set(new RuntimeException("close:" + code + "/" + reason));
+                            rrvo.setEndProcessTimestamp(System.currentTimeMillis());
+                            rrvo.setText("error:close:" + code + "/" + reason);
+                            try {
+                                source.close();
+                            } catch (IOException e) {
+                                // throw new RuntimeException(e);
+                            }
+                            sendResult.accept(rrvo);
+                            finishLatch.countDown();
+                        });
             }
 
             context.getLogger().info("wait for all funasr offline ("+events.length+") task complete");
@@ -194,7 +192,7 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
                 creds.getSecurityToken());
     }
 
-    private OSSObject getOSSObject(final Context context, final RbtEvent event, final OSS ossClient, final RbtResultVO resultvo) {
+    private OSSObject getOSSObject(final Context context, final RbtEvent event, final OSS ossClient) {
         if (event.data == null || event.data.body == null || event.data.body.ossPath == null) {
             context.getLogger().warn("event's ossPath is null, skip");
             return null;
@@ -221,7 +219,6 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
             return null;
         }
 
-        resultvo.setObjectName(objectName);
         return ossClient.getObject(bucketName, objectName);
     }
 }
