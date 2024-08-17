@@ -7,6 +7,7 @@ import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
 import com.aliyun.oss.model.OSSObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
@@ -62,7 +63,7 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
             // 建议直接使用 AliyunFCDefaultRole 角色
             final OSS ossClient = getOssClient(context.getExecutionCredentials());
 
-            final Consumer<RbtResultVO> sendResult = buildSendRbtResultVO(context, rabbitmqChannel);
+            final Consumer<RbtResultVO> sendResult = buildSendRbtResultVOAndCountdown(context, rabbitmqChannel, finishLatch);
 
             for (RbtEvent event : events) {
                 final OSSObject source = getOSSObject(context, event, ossClient);
@@ -71,51 +72,7 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
                     continue;
                 }
 
-                final RbtResultVO rrvo = new RbtResultVO();
-                rrvo.setSessionId(event.data.body.getSessionId());
-                rrvo.setSourceTimestamp(event.data.body.getSourceTimestamp());
-                rrvo.setObjectName(source.getKey());
-
-                context.getLogger().info("oss source: " + source.getKey());
-                rrvo.setStartProcessTimestamp(System.currentTimeMillis());
-                new FunasrClient(context,
-                        ahc.prepareGet(System.getenv("FUNASR_WSURI")),
-                        source.getObjectContent(),
-                        (text) -> {
-                            rrvo.setEndProcessTimestamp(System.currentTimeMillis());
-                            rrvo.setText(text);
-                            try {
-                                source.close();
-                            } catch (IOException e) {
-                                // throw new RuntimeException(e);
-                            }
-                            sendResult.accept(rrvo);
-                            finishLatch.countDown();
-                        },
-                        (throwable) -> {
-                            exRef.set(throwable);
-                            rrvo.setEndProcessTimestamp(System.currentTimeMillis());
-                            rrvo.setText(throwable.toString());
-                            try {
-                                source.close();
-                            } catch (IOException e) {
-                                // throw new RuntimeException(e);
-                            }
-                            sendResult.accept(rrvo);
-                            finishLatch.countDown();
-                        },
-                        (code, reason) -> {
-                            exRef.set(new RuntimeException("close:" + code + "/" + reason));
-                            rrvo.setEndProcessTimestamp(System.currentTimeMillis());
-                            rrvo.setText("error:close:" + code + "/" + reason);
-                            try {
-                                source.close();
-                            } catch (IOException e) {
-                                // throw new RuntimeException(e);
-                            }
-                            sendResult.accept(rrvo);
-                            finishLatch.countDown();
-                        });
+                processObject(context, event, source, ahc, sendResult, exRef);
             }
 
             context.getLogger().info("wait for all funasr offline ("+events.length+") task complete");
@@ -139,8 +96,59 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
         return "handle (" + events.length +") events";
     }
 
-    private @NotNull Consumer<RbtResultVO> buildSendRbtResultVO(final Context context,
-                                                                final com.rabbitmq.client.Channel rabbitmqChannel) {
+    private static void processObject(Context context,
+                                      RbtEvent event,
+                                      OSSObject source,
+                                      AsyncHttpClient ahc,
+                                      Consumer<RbtResultVO> sendResult,
+                                      AtomicReference<Throwable> exRef) {
+        final RbtResultVO rrvo = new RbtResultVO();
+        rrvo.setSessionId(event.data.body.getSessionId());
+        rrvo.setSourceTimestamp(event.data.body.getSourceTimestamp());
+        rrvo.setObjectName(source.getKey());
+
+        context.getLogger().info("oss source: " + source.getKey());
+        rrvo.setStartProcessTimestamp(System.currentTimeMillis());
+        new FunasrClient(context,
+                ahc.prepareGet(System.getenv("FUNASR_WSURI")),
+                source.getObjectContent(),
+                (text) -> {
+                    rrvo.setEndProcessTimestamp(System.currentTimeMillis());
+                    rrvo.setText(text);
+                    try {
+                        source.close();
+                    } catch (IOException e) {
+                        // throw new RuntimeException(e);
+                    }
+                    sendResult.accept(rrvo);
+                },
+                (throwable) -> {
+                    exRef.set(throwable);
+                    rrvo.setEndProcessTimestamp(System.currentTimeMillis());
+                    rrvo.setText(throwable.toString());
+                    try {
+                        source.close();
+                    } catch (IOException e) {
+                        // throw new RuntimeException(e);
+                    }
+                    sendResult.accept(rrvo);
+                },
+                (code, reason) -> {
+                    exRef.set(new RuntimeException("close:" + code + "/" + reason));
+                    rrvo.setEndProcessTimestamp(System.currentTimeMillis());
+                    rrvo.setText("error:close:" + code + "/" + reason);
+                    try {
+                        source.close();
+                    } catch (IOException e) {
+                        // throw new RuntimeException(e);
+                    }
+                    sendResult.accept(rrvo);
+                });
+    }
+
+    private @NotNull Consumer<RbtResultVO> buildSendRbtResultVOAndCountdown(final Context context,
+                                                                            final Channel rabbitmqChannel,
+                                                                            final CountDownLatch finishLatch) {
         final String exchange= System.getenv("RBT_MQ_EXCHANGE");
         final String routingKey = System.getenv("RBT_MQ_ROUTINGKEY");
 
@@ -150,6 +158,9 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
                 sendRbtResult(context, vo, rabbitmqChannel, exchange, routingKey);
             } catch (IOException e) {
                 // throw new RuntimeException(e);
+            }
+            finally {
+                finishLatch.countDown();
             }
         };
     }
