@@ -1,15 +1,17 @@
 package com.yulore.fc.rbt2text;
 
 import com.yulore.fc.pojo.RabbitMQData;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.asynchttpclient.request.body.Body;
 
+@ToString
 public class RbtData extends RabbitMQData {
-    @Setter
-    @Getter
+    @Data
     @ToString
-    static class Body {
+    static public class Body {
         String sessionId;
         String ossPath;
         Long   sourceTimestamp;
@@ -23,12 +25,5 @@ public class RbtData extends RabbitMQData {
 
     public void setBody(Body body) {
         this.body = body;
-    }
-
-    @Override
-    public String toString() {
-        return "RbtData{" +
-                "body=" + body +
-                "} " + super.toString();
     }
 }
