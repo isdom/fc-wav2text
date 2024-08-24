@@ -7,6 +7,7 @@ import lombok.Setter;
 import lombok.ToString;
 import org.asynchttpclient.request.body.Body;
 
+@Data
 @ToString
 public class RbtData extends RabbitMQData {
     @Data
@@ -18,12 +19,4 @@ public class RbtData extends RabbitMQData {
     }
 
     Body body;
-
-    public Body getBody() {
-        return body;
-    }
-
-    public void setBody(Body body) {
-        this.body = body;
-    }
 }
