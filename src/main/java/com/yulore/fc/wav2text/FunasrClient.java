@@ -8,7 +8,7 @@
 // java FunasrWsClient
 // usage:  FunasrWsClient [-h] [--port PORT] [--host HOST] [--audio_in AUDIO_IN] [--num_threads NUM_THREADS]
 //                 [--chunk_size CHUNK_SIZE] [--chunk_interval CHUNK_INTERVAL] [--mode MODE]
-package com.yulore.fc.rbt2text;
+package com.yulore.fc.wav2text;
 
 import com.aliyun.fc.runtime.Context;
 import com.aliyun.fc.runtime.FunctionComputeLogger;
@@ -22,7 +22,6 @@ import org.json.simple.parser.JSONParser;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;

@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.yulore</groupId>
-    <artifactId>funasr-rbt2text</artifactId>
+    <artifactId>fc-wav2text</artifactId>
     <packaging>jar</packaging>
     <version>1.0-SNAPSHOT</version>
     <name>FCRbt2Text</name>

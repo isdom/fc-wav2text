@@ -1,15 +1,12 @@
-package com.yulore.fc.rbt2text;
+package com.yulore.fc.wav2text;
 
 import com.yulore.fc.pojo.RabbitMQData;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
-import org.asynchttpclient.request.body.Body;
 
 @Data
 @ToString
-public class RbtData extends RabbitMQData {
+public class Wav2TextData extends RabbitMQData {
     @Data
     @ToString
     static public class Body {

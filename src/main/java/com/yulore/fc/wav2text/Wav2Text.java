@@ -1,4 +1,4 @@
-package com.yulore.fc.rbt2text;
+package com.yulore.fc.wav2text;
 
 import com.aliyun.fc.runtime.Context;
 import com.aliyun.fc.runtime.Credentials;
@@ -26,9 +26,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
+public class Wav2Text implements PojoRequestHandler<Wav2TextEvent[], String> {
     @Override
-    public String handleRequest(final RbtEvent[] events, final Context context) {
+    public String handleRequest(final Wav2TextEvent[] events, final Context context) {
         final AtomicReference<Throwable> exRef = new AtomicReference<>(null);
 
         try (final RedisClient redisClient = RedisClient.create(getRedisURI());
@@ -63,9 +63,9 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
             // 建议直接使用 AliyunFCDefaultRole 角色
             final OSS ossClient = getOssClient(context.getExecutionCredentials());
 
-            final Consumer<RbtResultVO> sendResult = buildSendRbtResultVOAndCountdown(context, rabbitmqChannel, finishLatch);
+            final Consumer<ResultVO> sendResult = buildSendRbtResultVOAndCountdown(context, rabbitmqChannel, finishLatch);
 
-            for (RbtEvent event : events) {
+            for (Wav2TextEvent event : events) {
                 final OSSObject source = getOSSObject(context, event, ossClient);
                 if (source == null) {
                     finishLatch.countDown();
@@ -97,12 +97,12 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
     }
 
     private static void processObject(Context context,
-                                      RbtEvent event,
+                                      Wav2TextEvent event,
                                       OSSObject source,
                                       AsyncHttpClient ahc,
-                                      Consumer<RbtResultVO> sendResult,
+                                      Consumer<ResultVO> sendResult,
                                       AtomicReference<Throwable> exRef) {
-        final RbtResultVO rrvo = new RbtResultVO();
+        final ResultVO rrvo = new ResultVO();
         rrvo.setSessionId(event.data.body.getSessionId());
         rrvo.setSourceTimestamp(event.data.body.getSourceTimestamp());
         rrvo.setObjectName(source.getKey());
@@ -146,9 +146,9 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
                 });
     }
 
-    private @NotNull Consumer<RbtResultVO> buildSendRbtResultVOAndCountdown(final Context context,
-                                                                            final Channel rabbitmqChannel,
-                                                                            final CountDownLatch finishLatch) {
+    private @NotNull Consumer<ResultVO> buildSendRbtResultVOAndCountdown(final Context context,
+                                                                         final Channel rabbitmqChannel,
+                                                                         final CountDownLatch finishLatch) {
         final String exchange= System.getenv("RBT_MQ_EXCHANGE");
         final String routingKey = System.getenv("RBT_MQ_ROUTINGKEY");
 
@@ -174,7 +174,7 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
     }
 
     private void sendRbtResult(final Context context,
-                               final RbtResultVO vo,
+                               final ResultVO vo,
                                final com.rabbitmq.client.Channel rabbitmqChannel,
                                final String exchange,
                                final String routingKey) throws IOException {
@@ -203,7 +203,7 @@ public class FCRbt2Text implements PojoRequestHandler<RbtEvent[], String> {
                 creds.getSecurityToken());
     }
 
-    private OSSObject getOSSObject(final Context context, final RbtEvent event, final OSS ossClient) {
+    private OSSObject getOSSObject(final Context context, final Wav2TextEvent event, final OSS ossClient) {
         if (event.data == null || event.data.body == null || event.data.body.ossPath == null) {
             context.getLogger().warn("event's ossPath is null, skip");
             return null;
