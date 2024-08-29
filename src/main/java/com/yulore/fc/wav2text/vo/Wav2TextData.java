@@ -1,6 +1,6 @@
-package com.yulore.fc.wav2text;
+package com.yulore.fc.wav2text.vo;
 
-import com.yulore.fc.pojo.RabbitMQData;
+import com.yulore.fc.event.RabbitMQData;
 import lombok.Data;
 import lombok.ToString;
 
@@ -12,6 +12,7 @@ public class Wav2TextData extends RabbitMQData {
     static public class Body {
         String sessionId;
         String ossPath;
+        Integer stage; // 0 -- rbt , 1 -- answered
         Long   sourceTimestamp;
     }
 

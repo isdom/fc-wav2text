@@ -1,4 +1,4 @@
-package com.yulore.fc.wav2text;
+package com.yulore.fc.wav2text.vo;
 
 import lombok.Data;
 import lombok.ToString;
@@ -7,6 +7,7 @@ import lombok.ToString;
 @ToString
 public class ResultVO {
     String sessionId;
+    Integer stage;
     String objectName;
     String text;
     long   sourceTimestamp;

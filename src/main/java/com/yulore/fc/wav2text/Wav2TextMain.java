@@ -9,6 +9,8 @@ import com.aliyun.oss.model.OSSObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConnectionFactory;
+import com.yulore.fc.wav2text.vo.ResultVO;
+import com.yulore.fc.wav2text.vo.Wav2TextEvent;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.api.StatefulRedisConnection;
@@ -26,7 +28,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-public class Wav2Text implements PojoRequestHandler<Wav2TextEvent[], String> {
+public class Wav2TextMain implements PojoRequestHandler<Wav2TextEvent[], String> {
     @Override
     public String handleRequest(final Wav2TextEvent[] events, final Context context) {
         final AtomicReference<Throwable> exRef = new AtomicReference<>(null);
@@ -103,8 +105,9 @@ public class Wav2Text implements PojoRequestHandler<Wav2TextEvent[], String> {
                                       Consumer<ResultVO> sendResult,
                                       AtomicReference<Throwable> exRef) {
         final ResultVO rrvo = new ResultVO();
-        rrvo.setSessionId(event.data.body.getSessionId());
-        rrvo.setSourceTimestamp(event.data.body.getSourceTimestamp());
+        rrvo.setSessionId(event.getData().getBody().getSessionId());
+        rrvo.setStage(event.getData().getBody().getStage());
+        rrvo.setSourceTimestamp(event.getData().getBody().getSourceTimestamp());
         rrvo.setObjectName(source.getKey());
 
         context.getLogger().info("oss source: " + source.getKey());
@@ -204,29 +207,31 @@ public class Wav2Text implements PojoRequestHandler<Wav2TextEvent[], String> {
     }
 
     private OSSObject getOSSObject(final Context context, final Wav2TextEvent event, final OSS ossClient) {
-        if (event.data == null || event.data.body == null || event.data.body.ossPath == null) {
+        if (event.getData() == null || event.getData().getBody() == null || event.getData().getBody().getOssPath() == null) {
             context.getLogger().warn("event's ossPath is null, skip");
             return null;
         }
 
+        final String ossPath = event.getData().getBody().getOssPath();
+
         // vfs://{vfs=vfs_oss,uuid={uuid},bucket=ylhz-aicall}public/rbtrec-dev/291/20240813/202408130000430000314462.wav
-        int bucketBeginIdx = event.data.body.ossPath.indexOf("bucket=");
+        int bucketBeginIdx = ossPath.indexOf("bucket=");
         if (bucketBeginIdx == -1) {
-            context.getLogger().warn("event's ossPath(" + event.data.body.ossPath + ") NOT contains bucket, skip");
+            context.getLogger().warn("event's ossPath(" + ossPath + ") NOT contains bucket, skip");
             return null;
         }
 
-        int bucketEndIdx = event.data.body.ossPath.indexOf('}', bucketBeginIdx);
+        int bucketEndIdx = ossPath.indexOf('}', bucketBeginIdx);
         if (bucketEndIdx == -1) {
-            context.getLogger().warn("event's ossPath(" + event.data.body.ossPath + ") missing '}', skip");
+            context.getLogger().warn("event's ossPath(" + ossPath + ") missing '}', skip");
             return null;
         }
 
-        final String bucketName = event.data.body.ossPath.substring(bucketBeginIdx + 7, bucketEndIdx);
-        final String objectName = event.data.body.ossPath.substring(bucketEndIdx + 1);
+        final String bucketName = ossPath.substring(bucketBeginIdx + 7, bucketEndIdx);
+        final String objectName = ossPath.substring(bucketEndIdx + 1);
 
         if (!ossClient.doesObjectExist(bucketName, objectName)) {
-            context.getLogger().warn("event's ossPath(" + event.data.body.ossPath + ") !NOT! exist, skip");
+            context.getLogger().warn("event's ossPath(" + ossPath + ") !NOT! exist, skip");
             return null;
         }
 

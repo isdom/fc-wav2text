@@ -1,4 +1,4 @@
-package com.yulore.fc.pojo;
+package com.yulore.fc.event;
 
 public class RabbitMQData {
     static class Props {

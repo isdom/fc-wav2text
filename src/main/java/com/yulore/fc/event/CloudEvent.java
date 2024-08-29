@@ -1,4 +1,4 @@
-package com.yulore.fc.pojo;
+package com.yulore.fc.event;
 
 import lombok.Data;
 import lombok.ToString;

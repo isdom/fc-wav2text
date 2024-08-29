@@ -1,6 +1,6 @@
-package com.yulore.fc.wav2text;
+package com.yulore.fc.wav2text.vo;
 
-import com.yulore.fc.pojo.CloudEvent;
+import com.yulore.fc.event.CloudEvent;
 import lombok.Data;
 import lombok.ToString;
 
