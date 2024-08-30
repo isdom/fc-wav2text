@@ -158,7 +158,7 @@ public class Wav2TextMain implements PojoRequestHandler<Wav2TextEvent[], String>
         context.getLogger().info("MQ env: exchange:" + exchange + ",routingKey:" + routingKey);
         return (vo) -> {
             try {
-                sendRbtResult(context, vo, rabbitmqChannel, exchange, routingKey);
+                sendTextResult(context, vo, rabbitmqChannel, exchange, routingKey);
             } catch (IOException e) {
                 // throw new RuntimeException(e);
             }
@@ -168,7 +168,7 @@ public class Wav2TextMain implements PojoRequestHandler<Wav2TextEvent[], String>
         };
     }
 
-    private static @NotNull RedisURI getRedisURI() {
+    private static RedisURI getRedisURI() {
         return RedisURI.Builder.redis(System.getenv("RBT_REDIS_HOST"))
                 .withPassword(System.getenv("RBT_REDIS_PASSWD").toCharArray())
                 .withPort(Integer.parseInt(System.getenv("RBT_REDIS_PORT")))
@@ -176,17 +176,17 @@ public class Wav2TextMain implements PojoRequestHandler<Wav2TextEvent[], String>
                 .build();
     }
 
-    private void sendRbtResult(final Context context,
-                               final ResultVO vo,
-                               final com.rabbitmq.client.Channel rabbitmqChannel,
-                               final String exchange,
-                               final String routingKey) throws IOException {
+    private void sendTextResult(final Context context,
+                                final ResultVO vo,
+                                final com.rabbitmq.client.Channel rabbitmqChannel,
+                                final String exchange,
+                                final String routingKey) throws IOException {
         final String json = new ObjectMapper().writeValueAsString(vo);
         rabbitmqChannel.basicPublish(exchange, routingKey, null, json.getBytes(StandardCharsets.UTF_8));
         context.getLogger().info("send to rabbitmq:" + json);
     }
 
-    private static @NotNull ConnectionFactory getRabbitMQConnectionFactory(final Context context) {
+    private static ConnectionFactory getRabbitMQConnectionFactory(final Context context) {
         final ConnectionFactory factory = new ConnectionFactory();
         final String uri = System.getenv("RBT_MQ_URI");
         try {
