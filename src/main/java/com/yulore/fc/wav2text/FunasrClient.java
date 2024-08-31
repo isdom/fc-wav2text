@@ -34,6 +34,7 @@ public class FunasrClient {
 
     public FunasrClient(final Context context,
                         final BoundRequestBuilder brb,
+                        final String format,
                         final InputStream is,
                         final Consumer<String> onResult,
                         final Consumer<Throwable> onError,
@@ -47,7 +48,7 @@ public class FunasrClient {
                 wsRef.set(ws);
 
                 // step 1
-                sendBeginMsg(ws);
+                sendBeginMsg(ws, format);
 
                 // step 2
                 try {
@@ -116,7 +117,7 @@ public class FunasrClient {
         return sendChunkSize;
     }
 
-    private void sendBeginMsg(final WebSocket ws) {
+    private void sendBeginMsg(final WebSocket ws, final String format) {
         JSONObject obj = new JSONObject();
         obj.put("mode", "offline");
         JSONArray array = new JSONArray();
@@ -129,7 +130,7 @@ public class FunasrClient {
         obj.put("chunk_interval", chunkInterval);
         obj.put("wav_name", "ahc");
 
-        obj.put("wav_format", "wav");
+        obj.put("wav_format", format);
         obj.put("is_speaking", true);
 
         logger.info("sendJson: " + obj);
