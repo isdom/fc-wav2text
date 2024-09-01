@@ -92,7 +92,7 @@ public class FunasrClient {
                         logger.info("timestamp: " + jsonObject.get("timestamp"));
                     }
                 } catch (org.json.simple.parser.ParseException e) {
-                    e.printStackTrace();
+                    logger.error("error:" + e.toString());
                 }
                 if (wsRef.get() != null) {
                     wsRef.get().sendCloseFrame();
