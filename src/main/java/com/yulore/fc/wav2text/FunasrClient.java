@@ -113,8 +113,7 @@ public class FunasrClient {
         logger.info("chunk_size:" + String.valueOf(int_chunk_size));
         logger.info("CHUNK:" + CHUNK);
         logger.info("stride:" + String.valueOf(stride));
-        int sendChunkSize = CHUNK * 2;
-        return sendChunkSize;
+        return CHUNK * 2;
     }
 
     private void sendBeginMsg(final WebSocket ws, final String format) {
