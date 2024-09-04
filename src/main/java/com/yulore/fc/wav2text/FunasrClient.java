@@ -105,11 +105,9 @@ public class FunasrClient {
     private int getSendChunkSize() {
         int RATE = 8000;
         String[] chunkList = strChunkSize.split(",");
-        int int_chunk_size = 60 * Integer.valueOf(chunkList[1].trim()) / chunkInterval;
-        int CHUNK = Integer.valueOf(RATE / 1000 * int_chunk_size);
-        int stride =
-                Integer.valueOf(
-                        60 * Integer.valueOf(chunkList[1].trim()) / chunkInterval / 1000 * RATE * 2);
+        int int_chunk_size = 60 * Integer.parseInt(chunkList[1].trim()) / chunkInterval;
+        int CHUNK = RATE / 1000 * int_chunk_size;
+        int stride = 60 * Integer.parseInt(chunkList[1].trim()) / chunkInterval / 1000 * RATE * 2;
         logger.info("chunk_size:" + String.valueOf(int_chunk_size));
         logger.info("CHUNK:" + CHUNK);
         logger.info("stride:" + String.valueOf(stride));
