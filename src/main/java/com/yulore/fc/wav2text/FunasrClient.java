@@ -145,9 +145,7 @@ public class FunasrClient {
     // function for rec wav file
     public void sendData(final WebSocket ws, int chunkSize, InputStream is) throws IOException {
         byte[] bytes = new byte[chunkSize];
-
-        int readSize = 0;
-        readSize = is.read(bytes, 0, chunkSize);
+        int readSize = is.read(bytes, 0, chunkSize);
         while (readSize > 0) {
             // send when it is chunk size
             if (readSize == chunkSize) {
