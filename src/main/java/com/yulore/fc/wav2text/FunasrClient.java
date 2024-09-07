@@ -136,7 +136,7 @@ public class FunasrClient {
 
     // send json at end of wav
     public void sendEof(final WebSocket ws) {
-        JSONObject obj = new JSONObject();
+        final JSONObject obj = new JSONObject();
         obj.put("is_speaking", false);
         logger.info("sendEof: " + obj);
         ws.sendTextFrame(obj.toString());
