@@ -118,7 +118,7 @@ public class FunasrClient {
         final JSONObject obj = new JSONObject();
         obj.put("mode", "offline");
         JSONArray array = new JSONArray();
-        String[] chunkList = strChunkSize.split(",");
+        final String[] chunkList = strChunkSize.split(",");
         for (int i = 0; i < chunkList.length; i++) {
             array.add(Integer.valueOf(chunkList[i].trim()));
         }
