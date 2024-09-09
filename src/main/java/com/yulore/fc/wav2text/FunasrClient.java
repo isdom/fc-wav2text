@@ -12,6 +12,7 @@ package com.yulore.fc.wav2text;
 
 import com.aliyun.fc.runtime.Context;
 import com.aliyun.fc.runtime.FunctionComputeLogger;
+import lombok.extern.slf4j.Slf4j;
 import org.asynchttpclient.BoundRequestBuilder;
 import org.asynchttpclient.ws.WebSocket;
 import org.asynchttpclient.ws.WebSocketListener;
@@ -28,9 +29,11 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /** This example demonstrates how to connect to websocket server. */
+@Slf4j
 public class FunasrClient {
 
-    FunctionComputeLogger logger;
+    //FunctionComputeLogger logger;
+
 
     public FunasrClient(final Context context,
                         final BoundRequestBuilder brb,
@@ -39,7 +42,9 @@ public class FunasrClient {
                         final Consumer<String> onResult,
                         final Consumer<Throwable> onError,
                         final BiConsumer<Integer, String> onClose) {
-        logger = context.getLogger();
+        //if (context != null) {
+            //logger = context.getLogger();
+        //}
         final AtomicBoolean isOnTextOrOnError = new AtomicBoolean(false);
         final AtomicReference<WebSocket> wsRef = new AtomicReference<>(null);
         brb.execute(new WebSocketUpgradeHandler.Builder().addWebSocketListener(new WebSocketListener() {
@@ -63,7 +68,9 @@ public class FunasrClient {
 
             @Override
             public void onClose(WebSocket webSocket, int code, String reason) {
-                logger.info("Connection closed / Code: " + code + " Reason: " + reason);
+                //if (null != logger) {
+                    log.info("Connection closed / Code: " + code + " Reason: " + reason);
+                //}
                 if (!isOnTextOrOnError.get()) {
                     onClose.accept(code, reason);
                 }
@@ -72,7 +79,9 @@ public class FunasrClient {
             @Override
             public void onError(final Throwable throwable) {
                 isOnTextOrOnError.compareAndExchange(false, true);
-                logger.info("ex: " + throwable);
+                //if (null != logger) {
+                    log.info("ex: " + throwable);
+                //}
                 if (wsRef.get() != null) {
                     wsRef.get().sendCloseFrame(1000, "ex:" + throwable);
                 }
@@ -84,15 +93,21 @@ public class FunasrClient {
                 isOnTextOrOnError.compareAndExchange(false, true);
                 JSONObject jsonObject = new JSONObject();
                 final JSONParser jsonParser = new JSONParser();
-                logger.info("received: " + payload);
+                //if (null != logger) {
+                    log.info("received: " + payload);
+                //}
                 try {
                     jsonObject = (JSONObject) jsonParser.parse(payload);
-                    logger.info("text: " + jsonObject.get("text"));
+                    //if (null != logger) {
+                        log.info("text: " + jsonObject.get("text"));
+                    //}
                     if (jsonObject.containsKey("timestamp")) {
-                        logger.info("timestamp: " + jsonObject.get("timestamp"));
+                        //if (null != logger) {
+                            log.info("timestamp: " + jsonObject.get("timestamp"));
+                        //}
                     }
                 } catch (org.json.simple.parser.ParseException e) {
-                    logger.error("error:" + e.toString());
+                    log.error("error:" + e.toString());
                 }
                 if (wsRef.get() != null) {
                     wsRef.get().sendCloseFrame();
@@ -108,9 +123,11 @@ public class FunasrClient {
         int int_chunk_size = 60 * Integer.parseInt(chunkList[1].trim()) / chunkInterval;
         int CHUNK = RATE / 1000 * int_chunk_size;
         int stride = 60 * Integer.parseInt(chunkList[1].trim()) / chunkInterval / 1000 * RATE * 2;
-        logger.info("chunk_size:" + String.valueOf(int_chunk_size));
-        logger.info("CHUNK:" + CHUNK);
-        logger.info("stride:" + String.valueOf(stride));
+        //if (null != logger) {
+        log.info("chunk_size:" + String.valueOf(int_chunk_size));
+        log.info("CHUNK:" + CHUNK);
+        log.info("stride:" + String.valueOf(stride));
+        //}
         return CHUNK * 2;
     }
 
@@ -130,7 +147,9 @@ public class FunasrClient {
         obj.put("wav_format", format);
         obj.put("is_speaking", true);
 
-        logger.info("sendJson: " + obj);
+        //if (null != logger) {
+            log.info("sendJson: " + obj);
+        //}
         ws.sendTextFrame(obj.toString());
     }
 
@@ -138,7 +157,9 @@ public class FunasrClient {
     public void sendEof(final WebSocket ws) {
         final JSONObject obj = new JSONObject();
         obj.put("is_speaking", false);
-        logger.info("sendEof: " + obj);
+        //if (null != logger) {
+            log.info("sendEof: " + obj);
+        //}
         ws.sendTextFrame(obj.toString());
     }
 
