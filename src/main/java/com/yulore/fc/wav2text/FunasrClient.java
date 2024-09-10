@@ -10,8 +10,6 @@
 //                 [--chunk_size CHUNK_SIZE] [--chunk_interval CHUNK_INTERVAL] [--mode MODE]
 package com.yulore.fc.wav2text;
 
-import com.aliyun.fc.runtime.Context;
-import com.aliyun.fc.runtime.FunctionComputeLogger;
 import lombok.extern.slf4j.Slf4j;
 import org.asynchttpclient.BoundRequestBuilder;
 import org.asynchttpclient.ws.WebSocket;
@@ -32,19 +30,12 @@ import java.util.function.Consumer;
 @Slf4j
 public class FunasrClient {
 
-    //FunctionComputeLogger logger;
-
-
-    public FunasrClient(final Context context,
-                        final BoundRequestBuilder brb,
+    public FunasrClient(final BoundRequestBuilder brb,
                         final String format,
                         final InputStream is,
                         final Consumer<String> onResult,
                         final Consumer<Throwable> onError,
                         final BiConsumer<Integer, String> onClose) {
-        //if (context != null) {
-            //logger = context.getLogger();
-        //}
         final AtomicBoolean isOnTextOrOnError = new AtomicBoolean(false);
         final AtomicReference<WebSocket> wsRef = new AtomicReference<>(null);
         brb.execute(new WebSocketUpgradeHandler.Builder().addWebSocketListener(new WebSocketListener() {

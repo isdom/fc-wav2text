@@ -20,8 +20,7 @@ public class Wav2TextDemo  {
              final InputStream is = new FileInputStream(args[0])) {
 
             final CountDownLatch finishLatch = new CountDownLatch(1);
-            new FunasrClient(null,
-                    ahc.prepareGet(System.getenv("FUNASR_WSURI")),
+            new FunasrClient(ahc.prepareGet(System.getenv("FUNASR_WSURI")),
                     "wav",
                     is,
                     (text) -> {

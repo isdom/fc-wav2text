@@ -112,8 +112,7 @@ public class Wav2TextMain implements PojoRequestHandler<Wav2TextEvent[], String>
 
         context.getLogger().info("oss source: " + source.getKey());
         rrvo.setStartProcessTimestamp(System.currentTimeMillis());
-        new FunasrClient(context,
-                ahc.prepareGet(System.getenv("FUNASR_WSURI")),
+        new FunasrClient(ahc.prepareGet(System.getenv("FUNASR_WSURI")),
                 "wav",
                 source.getObjectContent(),
                 (text) -> {
