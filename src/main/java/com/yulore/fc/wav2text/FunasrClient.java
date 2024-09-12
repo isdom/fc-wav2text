@@ -68,9 +68,7 @@ public class FunasrClient {
             @Override
             public void onError(final Throwable throwable) {
                 isOnTextOrOnError.compareAndExchange(false, true);
-                //if (null != logger) {
-                    log.info("ex: " + throwable);
-                //}
+                log.info("ex: {}", String.valueOf(throwable));
                 if (wsRef.get() != null) {
                     wsRef.get().sendCloseFrame(1000, "ex:" + throwable);
                 }
