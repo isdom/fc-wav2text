@@ -80,9 +80,7 @@ public class FunasrClient {
                 isOnTextOrOnError.compareAndExchange(false, true);
                 JSONObject jsonObject = new JSONObject();
                 final JSONParser jsonParser = new JSONParser();
-                //if (null != logger) {
-                    log.info("received: " + payload);
-                //}
+                log.info("received: {}", payload);
                 try {
                     jsonObject = (JSONObject) jsonParser.parse(payload);
                     //if (null != logger) {
