@@ -83,9 +83,7 @@ public class FunasrClient {
                 log.info("received: {}", payload);
                 try {
                     jsonObject = (JSONObject) jsonParser.parse(payload);
-                    //if (null != logger) {
-                        log.info("text: " + jsonObject.get("text"));
-                    //}
+                    log.info("text: {}", jsonObject.get("text"));
                     if (jsonObject.containsKey("timestamp")) {
                         //if (null != logger) {
                             log.info("timestamp: " + jsonObject.get("timestamp"));
