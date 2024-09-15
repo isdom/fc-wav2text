@@ -140,9 +140,7 @@ public class FunasrClient {
     public void sendEof(final WebSocket ws) {
         final JSONObject obj = new JSONObject();
         obj.put("is_speaking", false);
-        //if (null != logger) {
-            log.info("sendEof: " + obj);
-        //}
+        log.info("sendEof: {}", obj);
         ws.sendTextFrame(obj.toString());
     }
 
