@@ -131,7 +131,7 @@ public class FunasrClient {
         obj.put("is_speaking", true);
 
         //if (null != logger) {
-            log.info("sendJson: " + obj);
+        log.info("sendJson: {}", obj);
         //}
         ws.sendTextFrame(obj.toString());
     }
