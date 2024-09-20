@@ -1,37 +1,24 @@
 package com.yulore.fc.wav2text;
 
 import com.aliyun.fc.runtime.Context;
-import com.aliyun.fc.runtime.Credentials;
 import com.aliyun.fc.runtime.PojoRequestHandler;
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSClientBuilder;
-import com.aliyun.oss.model.OSSObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.ConnectionFactory;
 import com.yulore.fc.event.http.HttpRequestVO;
 import com.yulore.fc.event.http.HttpResponseVO;
 import com.yulore.fc.http.MultipartParser;
-import com.yulore.fc.wav2text.vo.ResultVO;
-import com.yulore.fc.wav2text.vo.Wav2TextEvent;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisURI;
-import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.async.RedisAsyncCommands;
 import lombok.extern.slf4j.Slf4j;
-import lombok.extern.slf4j.XSlf4j;
+import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
-import org.jetbrains.annotations.NotNull;
-import org.json.simple.JSONObject;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 import static org.asynchttpclient.Dsl.asyncHttpClient;
 
@@ -42,17 +29,78 @@ public class Wav2TextHttpServer implements PojoRequestHandler<HttpRequestVO, Htt
 
         log.info("IsBase64Encoded: {}", httpRequest.getIsBase64Encoded());
         log.info("headers: {}", httpRequest.getHeaders());
-
+        log.info("http: {}", httpRequest.getRequestContext().getHttp());
+        if (!httpRequest.getRequestContext().getHttp().getMethod().equals("POST")) {
+            final HttpResponseVO responseVO = new HttpResponseVO();
+            responseVO.setStatusCode(200);
+            return responseVO;
+        }
+        final byte[] bodyBytes = Base64.getDecoder().decode(httpRequest.getBody());
+        final Map<String, List<FileItem>> multipart;
         try {
-            byte[] body = Base64.getDecoder().decode(httpRequest.getBody());
-            byte[] fileBytes  = MultipartParser.parseRequest(body, httpRequest.getHeaders().get("Content-Type")).get("file").get(0).get();
-            log.info("fileBytes: {} bytes", fileBytes.length);
-        } catch (FileUploadException ex) {
+            multipart = MultipartParser.parseRequest(bodyBytes, httpRequest.getHeaders().get("Content-Type"));
+        } catch (FileUploadException e) {
+            throw new RuntimeException(e);
+        }
+        final String audioId = getItemAsString(multipart, "audio_id");
+        final String timeStamp = getItemAsString(multipart, "timestamp");
+        final String sign = getItemAsString(multipart, "sign");
+        final FileItem file  = multipart.get("file").get(0);
+        log.info("ASR params => audio_id: {}, timestamp: {}, sign: {}, file length: {}", audioId, timeStamp, sign, file.get().length);
+
+        final AtomicReference<String> refText = new AtomicReference<>(null);
+        final AtomicReference<String> refStatus = new AtomicReference<>(null);
+
+        try (final AsyncHttpClient ahc = asyncHttpClient(new DefaultAsyncHttpClientConfig.Builder()
+                     .setMaxRequestRetry(0)
+                     .setWebSocketMaxBufferSize(1024000)
+                     .setWebSocketMaxFrameSize(1024000).build());
+        ) {
+            final CountDownLatch finishLatch = new CountDownLatch(1);
+            new FunasrClient(ahc.prepareGet(System.getenv("FUNASR_WSURI")),
+                    "wav",
+                    // source.getObjectContent(),
+                    file.getInputStream(),
+                    (text) -> {
+                        refText.set(text);
+                        refStatus.set("0");
+                        finishLatch.countDown();
+                    },
+                    (throwable) -> {
+                        refText.set(throwable.toString());
+                        refStatus.set("-1");
+                        finishLatch.countDown();
+                    },
+                    (code, reason) -> {
+                        refText.set(code + "/" + reason);
+                        refStatus.set("-1");
+                        finishLatch.countDown();
+                    });
+            finishLatch.await();
+        } catch (IOException | InterruptedException ex) {
             throw new RuntimeException(ex);
         }
 
         final HttpResponseVO httpResponse = new HttpResponseVO();
         httpResponse.setStatusCode(200);
+
+        final Wav2TextResult result = new Wav2TextResult();
+        result.setStatus(refStatus.get());
+        result.setAudio_text(refText.get());
+        result.setAudio_id(audioId);
+        try {
+            httpResponse.setBody(new ObjectMapper().writeValueAsString(result));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         return httpResponse;
+    }
+
+    private static String getItemAsString(final Map<String, List<FileItem>> multipart, final String fieldName) {
+        final List<FileItem> items = multipart.get(fieldName);
+        if (items == null || items.isEmpty()) {
+            return null;
+        }
+        return items.get(0).getString();
     }
 }
