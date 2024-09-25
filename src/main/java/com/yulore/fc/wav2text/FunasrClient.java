@@ -106,7 +106,7 @@ public class FunasrClient {
         int stride = 60 * Integer.parseInt(chunkList[1].trim()) / chunkInterval / 1000 * RATE * 2;
         log.info("chunk_size:{}", String.valueOf(int_chunk_size));
         log.info("CHUNK:{}", CHUNK);
-        log.info("stride:" + String.valueOf(stride));
+        log.info("stride:{}", String.valueOf(stride));
         return CHUNK * 2;
     }
 
