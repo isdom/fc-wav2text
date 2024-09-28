@@ -149,7 +149,7 @@ public class FunasrClient {
 
             } else {
                 // send when at last or not is chunk size
-                byte[] tmpBytes = new byte[readSize];
+                final byte[] tmpBytes = new byte[readSize];
                 System.arraycopy(bytes, 0, tmpBytes, 0, readSize);
                 ws.sendBinaryFrame(tmpBytes);
             }
