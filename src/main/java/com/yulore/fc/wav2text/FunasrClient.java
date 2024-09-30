@@ -76,7 +76,7 @@ public class FunasrClient {
             }
 
             @Override
-            public void onTextFrame(String payload, boolean finalFragment, int rsv) {
+            public void onTextFrame(final String payload, final boolean finalFragment, final int rsv) {
                 isOnTextOrOnError.compareAndExchange(false, true);
                 JSONObject jsonObject = new JSONObject();
                 final JSONParser jsonParser = new JSONParser();
