@@ -58,7 +58,7 @@ public class FunasrClient {
             }
 
             @Override
-            public void onClose(WebSocket webSocket, int code, String reason) {
+            public void onClose(final WebSocket webSocket, int code, String reason) {
                 log.info("Connection closed / Code: {} Reason: {}", code, reason);
                 if (!isOnTextOrOnError.get()) {
                     onClose.accept(code, reason);
