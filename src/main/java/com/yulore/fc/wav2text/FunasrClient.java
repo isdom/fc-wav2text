@@ -157,6 +157,6 @@ public class FunasrClient {
         }
     }
 
-    static String strChunkSize = "5,10,5";
+    static final String strChunkSize = "5,10,5";
     static int chunkInterval = 10;
 }
