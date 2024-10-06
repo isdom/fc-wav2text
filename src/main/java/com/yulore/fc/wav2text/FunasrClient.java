@@ -113,7 +113,7 @@ public class FunasrClient {
     private void sendBeginMsg(final WebSocket ws, final String format) {
         final JSONObject obj = new JSONObject();
         obj.put("mode", "offline");
-        JSONArray array = new JSONArray();
+        final JSONArray array = new JSONArray();
         final String[] chunkList = strChunkSize.split(",");
         for (int i = 0; i < chunkList.length; i++) {
             array.add(Integer.valueOf(chunkList[i].trim()));
