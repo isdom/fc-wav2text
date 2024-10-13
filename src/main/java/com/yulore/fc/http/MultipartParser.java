@@ -14,7 +14,7 @@ public class MultipartParser {
         private final byte[] request;
         private final String contentType;
 
-        private SimpleContext(byte[] requestBody, String contentTypeHeader) {
+        private SimpleContext(final byte[] requestBody, final String contentTypeHeader) {
             this.request = requestBody;
             this.contentType = contentTypeHeader;
         }
