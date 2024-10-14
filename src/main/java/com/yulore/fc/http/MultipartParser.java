@@ -30,9 +30,9 @@ public class MultipartParser {
             // multipart/form-data; charset=UTF-8; boundary="xxxx"
             // in which case we can extract the charset, otherwise,
             // just default to UTF-8.
-            ParameterParser parser = new ParameterParser();
+            final ParameterParser parser = new ParameterParser();
             parser.setLowerCaseNames(true);
-            String charset = parser.parse(contentType, ';').get("charset");
+            final String charset = parser.parse(contentType, ';').get("charset");
             return charset != null ? charset : "UTF-8";
         }
 
