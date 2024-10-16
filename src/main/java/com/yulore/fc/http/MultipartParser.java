@@ -141,7 +141,7 @@ public class MultipartParser {
 
         @Override
         public void setFormField(boolean state) {
-            isFormField = state;
+            this.isFormField = state;
         }
 
         @Override
