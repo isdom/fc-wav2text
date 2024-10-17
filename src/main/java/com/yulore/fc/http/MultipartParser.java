@@ -65,7 +65,7 @@ public class MultipartParser {
         private FileItemHeaders headers;
         private final ByteArrayOutputStream os = new ByteArrayOutputStream();
 
-        public MemoryFileItem(String fieldName, String contentType, boolean isFormField, String fileName) {
+        public MemoryFileItem(final String fieldName, final String contentType, final boolean isFormField, final String fileName) {
             this.fieldName = fieldName;
             this.contentType = contentType;
             this.isFormField = isFormField;
