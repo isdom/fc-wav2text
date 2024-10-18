@@ -120,7 +120,7 @@ public class MultipartParser {
         }
 
         @Override
-        public String getString(String encoding) throws UnsupportedEncodingException {
+        public String getString(final String encoding) throws UnsupportedEncodingException {
             return new String(get(), encoding);
         }
 
