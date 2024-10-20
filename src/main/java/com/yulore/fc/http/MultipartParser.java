@@ -145,7 +145,7 @@ public class MultipartParser {
         }
 
         @Override
-        public void write(File file) throws Exception {
+        public void write(final File file) throws Exception {
         }
 
         @Override
