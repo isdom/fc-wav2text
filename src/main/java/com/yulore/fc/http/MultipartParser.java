@@ -189,7 +189,7 @@ public class MultipartParser {
      * @return a map, with each entry having one or more values for that named field.
      * @throws FileUploadException
      */
-    public static Map<String, List<FileItem>> parseRequest(byte[] requestBody, String contentTypeHeader)
+    public static Map<String, List<FileItem>> parseRequest(final byte[] requestBody, final String contentTypeHeader)
             throws FileUploadException {
         FileUpload fileUpload = new FileUpload(new MemoryFileItemFactory());
         return fileUpload.parseParameterMap(new SimpleContext(requestBody, contentTypeHeader));
