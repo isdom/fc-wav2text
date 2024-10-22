@@ -161,7 +161,7 @@ public class MultipartParser {
 
     private static class MemoryFileItemFactory implements FileItemFactory {
         @Override
-        public FileItem createItem(String fieldName, String contentType, boolean isFormField, String fileName) {
+        public FileItem createItem(final String fieldName, final String contentType, final boolean isFormField, final String fileName) {
             return new MemoryFileItem(fieldName, contentType, isFormField, fileName);
         }
     }
