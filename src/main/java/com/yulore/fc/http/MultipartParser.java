@@ -154,7 +154,7 @@ public class MultipartParser {
         }
 
         @Override
-        public void setHeaders(FileItemHeaders headers) {
+        public void setHeaders(final FileItemHeaders headers) {
             this.headers = headers;
         }
     }
