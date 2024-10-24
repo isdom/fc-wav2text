@@ -135,7 +135,7 @@ public class MultipartParser {
         }
 
         @Override
-        public void setFieldName(String name) {
+        public void setFieldName(final String name) {
             this.fieldName = name;
         }
 
