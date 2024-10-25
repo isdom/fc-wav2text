@@ -191,7 +191,7 @@ public class MultipartParser {
      */
     public static Map<String, List<FileItem>> parseRequest(final byte[] requestBody, final String contentTypeHeader)
             throws FileUploadException {
-        FileUpload fileUpload = new FileUpload(new MemoryFileItemFactory());
+        final FileUpload fileUpload = new FileUpload(new MemoryFileItemFactory());
         return fileUpload.parseParameterMap(new SimpleContext(requestBody, contentTypeHeader));
     }
 }
